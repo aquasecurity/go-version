@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aquasecurity/go-version/pkg/part"
 )
 
 func TestCompare(t *testing.T) {
@@ -75,7 +77,8 @@ func TestCompare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, Compare(tt.args.p1, tt.args.p2))
+			assert.Equal(t, tt.want, Compare(part.NewParts(tt.args.p1),
+				part.NewParts(tt.args.p2)))
 		})
 	}
 }

@@ -1,4 +1,4 @@
-package semver
+package version
 
 import (
 	"fmt"
@@ -6,13 +6,7 @@ import (
 	"strings"
 
 	"golang.org/x/xerrors"
-
-	"github.com/aquasecurity/go-version/pkg/part"
 )
-
-const cvRegex string = `v?([0-9|x|X|\*]+)(\.[0-9|x|X|\*]+)?(\.[0-9|x|X|\*]+)?` +
-	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
-	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?`
 
 var (
 	constraintOperators = map[string]operatorFunc{
@@ -25,6 +19,7 @@ var (
 		"=>": constraintGreaterThanEqual,
 		"<=": constraintLessThanEqual,
 		"=<": constraintLessThanEqual,
+		"~>": constraintPessimistic,
 		"~":  constraintTilde,
 		"^":  constraintCaret,
 	}
@@ -42,35 +37,26 @@ func init() {
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`^\s*(%s)\s*(%s)\s*$`,
 		strings.Join(ops, "|"),
-		cvRegex))
+		regex))
 }
 
+// Constraints is one or more constraint that a version can be checked against.
 type Constraints struct {
 	constraints [][]constraint
-	conf        conf
 }
 
-// Constraints is one or more constraint that a semantic version can be
-// checked against.
 type constraint struct {
 	version  Version
 	operator operatorFunc
 }
 
 // NewConstraints parses a given constraint and returns a new instance of Constraints
-func NewConstraints(v string, opts ...ConstraintOption) (Constraints, error) {
-	c := new(conf)
-
-	// Apply options
-	for _, o := range opts {
-		o.apply(c)
-	}
-
+func NewConstraints(v string) (Constraints, error) {
 	var css [][]constraint
 	for _, vv := range strings.Split(v, "||") {
 		var cs []constraint
 		for _, single := range strings.Split(vv, ",") {
-			c, err := newConstraint(single, *c)
+			c, err := newConstraint(single)
 			if err != nil {
 				return Constraints{}, err
 			}
@@ -81,45 +67,20 @@ func NewConstraints(v string, opts ...ConstraintOption) (Constraints, error) {
 
 	return Constraints{
 		constraints: css,
-		conf:        *c,
 	}, nil
 
 }
 
-func newConstraint(c string, conf conf) (constraint, error) {
-	if c == "" {
-		return constraint{
-			version: Version{
-				major:      part.Any(true),
-				minor:      part.Any(true),
-				patch:      part.Any(true),
-				preRelease: part.NewParts("*"),
-			},
-			operator: constraintOperators[""],
-		}, nil
-	}
-
+func newConstraint(c string) (constraint, error) {
 	m := constraintRegexp.FindStringSubmatch(c)
 	if m == nil {
 		return constraint{}, xerrors.Errorf("improper constraint: %s", c)
 	}
 
-	major := m[3]
-	minor := strings.TrimPrefix(m[4], ".")
-	patch := strings.TrimPrefix(m[5], ".")
-
-	v := Version{
-		major:    newPart(major, conf),
-		minor:    newPart(minor, conf),
-		patch:    newPart(patch, conf),
-		original: c,
+	v, err := Parse(m[2])
+	if err != nil {
+		return constraint{}, xerrors.Errorf("version parse error (%s): %w", m[2], err)
 	}
-
-	preRelease := part.NewParts(strings.TrimPrefix(m[6], "-"))
-	if preRelease.IsNull() && v.IsAny() {
-		preRelease = append(preRelease, part.Any(true))
-	}
-	v.preRelease = preRelease
 
 	return constraint{
 		version:  v,
@@ -127,22 +88,14 @@ func newConstraint(c string, conf conf) (constraint, error) {
 	}, nil
 }
 
-func newPart(p string, conf conf) part.Part {
-	if p == "" {
-		return part.NewEmpty(!conf.zeroPadding)
-	}
-	return part.NewPart(p)
-}
-
-func (c constraint) check(v Version, conf conf) bool {
-	op := preCheck(c.operator, conf)
-	return op(v, c.version)
+func (c constraint) check(v Version) bool {
+	return c.operator(v, c.version)
 }
 
 // Check tests if a version satisfies all the constraints.
 func (cs Constraints) Check(v Version) bool {
 	for _, c := range cs.constraints {
-		if andCheck(v, c, cs.conf) {
+		if andCheck(v, c) {
 			return true
 		}
 	}
@@ -150,9 +103,9 @@ func (cs Constraints) Check(v Version) bool {
 	return false
 }
 
-func andCheck(v Version, constraints []constraint, conf conf) bool {
+func andCheck(v Version, constraints []constraint) bool {
 	for _, c := range constraints {
-		if !c.check(v, conf) {
+		if !c.check(v) {
 			return false
 		}
 	}
@@ -176,7 +129,7 @@ func constraintGreaterThan(v, c Version) bool {
 }
 
 func constraintLessThan(v, c Version) bool {
-	return v.LessThan(c.Min())
+	return v.LessThan(c)
 }
 
 func constraintGreaterThanEqual(v, c Version) bool {
@@ -185,6 +138,10 @@ func constraintGreaterThanEqual(v, c Version) bool {
 
 func constraintLessThanEqual(v, c Version) bool {
 	return v.LessThanOrEqual(c)
+}
+
+func constraintPessimistic(v, c Version) bool {
+	return v.GreaterThanOrEqual(c) && v.LessThan(c.PessimisticBump())
 }
 
 func constraintTilde(v, c Version) bool {
@@ -208,15 +165,4 @@ func constraintCaret(v, c Version) bool {
 	// ^0.0    -->  >=0.0.0 <0.1.0
 	// ^0      -->  >=0.0.0 <1.0.0
 	return v.GreaterThanOrEqual(c) && v.LessThan(c.CaretBump())
-}
-
-func preCheck(f operatorFunc, conf conf) operatorFunc {
-	return func(v, c Version) bool {
-		if !conf.includePreRelease && (!v.preRelease.IsNull() && c.preRelease.IsNull()) {
-			return false
-		} else if !c.preRelease.IsNull() && c.IsAny() {
-			return false
-		}
-		return f(v, c)
-	}
 }

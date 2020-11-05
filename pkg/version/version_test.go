@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewVersion(t *testing.T) {
+func TestParse(t *testing.T) {
 	tests := []struct {
 		version string
 		wantErr bool
@@ -40,7 +40,7 @@ func TestNewVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			_, err := NewVersion(tt.version)
+			_, err := Parse(tt.version)
 			if tt.wantErr {
 				assert.NotNil(t, err)
 			} else {
@@ -75,10 +75,10 @@ func TestVersion_Compare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.Compare(v2))
@@ -110,10 +110,10 @@ func TestVersion_ComparePreRelease(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.Compare(v2))
@@ -128,14 +128,12 @@ func TestVersion_String(t *testing.T) {
 	}{
 		{"1.2.3", "1.2.3"},
 		{"1.2-beta", "1.2-beta"},
-		{"1.2.0-x.Y.0", "1.2.0-x.Y.0"},
-		{"1.2.0-x.Y.0+metadata", "1.2.0-x.Y.0+metadata"},
 		{"1.2.0-metadata-1.2.0+metadata~dist", "1.2.0-metadata-1.2.0+metadata~dist"},
 		{"17.03.0-ce", "17.3.0-ce"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			v, err := NewVersion(tt.version)
+			v, err := Parse(tt.version)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v.String())
@@ -167,10 +165,10 @@ func TestVersion_Equal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.Equal(v2))
@@ -202,10 +200,10 @@ func TestVersion_GreaterThan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.GreaterThan(v2))
@@ -237,10 +235,10 @@ func TestVersion_LessThan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.LessThan(v2))
@@ -273,10 +271,10 @@ func TestVersion_GreaterThanOrEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.GreaterThanOrEqual(v2))
@@ -308,13 +306,89 @@ func TestVersion_LessThanOrEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := NewVersion(tt.v1)
+			v1, err := Parse(tt.v1)
 			require.NoError(t, err)
 
-			v2, err := NewVersion(tt.v2)
+			v2, err := Parse(tt.v2)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, v1.LessThanOrEqual(v2))
+		})
+	}
+}
+
+func TestVersion_PessimisticBump(t *testing.T) {
+	tests := []struct {
+		version string
+		want    string
+	}{
+		{"1", "2"},
+		{"1.2", "2.0"},
+		{"1.2.3", "1.3.0"},
+		{"1.2.3.4", "1.2.4.0"},
+		{"2.1.0-a", "2.2.0"},
+		{"3.2.1.0-a", "3.2.2.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			v, err := Parse(tt.version)
+			require.NoError(t, err)
+
+			got := v.PessimisticBump()
+			assert.Equal(t, tt.want, got.String())
+		})
+	}
+}
+
+func TestVersion_TildeBump(t *testing.T) {
+	tests := []struct {
+		version string
+		want    string
+	}{
+		// https://docs.npmjs.com/cli/v6/using-npm/semver#tilde-ranges-123-12-1
+		{"1.2.3", "1.3.0"},
+		{"1.2", "1.3"},
+		{"1", "2"},
+		{"0.2.3", "0.3.0"},
+		{"0.2", "0.3"},
+		{"0", "1"},
+		{"1.2.3-beta.2", "1.3.0"},
+		{"1.2.3.4", "1.2.4.0"},
+		{"2.1.0-a", "2.2.0"},
+		{"3.2.1.0-a", "3.2.2.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			v, err := Parse(tt.version)
+			require.NoError(t, err)
+
+			got := v.TildeBump()
+			assert.Equal(t, tt.want, got.String())
+		})
+	}
+}
+func TestVersion_CaretBump(t *testing.T) {
+	tests := []struct {
+		version string
+		want    string
+	}{
+		// https://docs.npmjs.com/cli/v6/using-npm/semver#caret-ranges-123-025-004
+		{"1.2.3", "2.0.0"},
+		{"0.2.3", "0.3.0"},
+		{"0.0.3", "0.0.4"},
+		{"1.2.3-beta.2", "2.0.0"},
+		{"0.0.3-beta.2", "0.0.4"},
+		{"0.0", "0.1"},
+		{"1", "2"},
+		{"0", "1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			v, err := Parse(tt.version)
+			require.NoError(t, err)
+
+			got := v.CaretBump()
+			assert.Equal(t, tt.want, got.String())
 		})
 	}
 }

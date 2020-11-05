@@ -4,11 +4,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aquasecurity/go-version/pkg/semver"
-
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/aquasecurity/go-version/pkg/semver"
 )
 
 func TestCollection(t *testing.T) {
@@ -64,7 +63,7 @@ func TestCollection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			versions := make([]semver.Version, len(tt.versions))
 			for i, raw := range tt.versions {
-				v, err := semver.NewVersion(raw)
+				v, err := semver.Parse(raw)
 				require.NoError(t, err)
 				versions[i] = v
 			}

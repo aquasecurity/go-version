@@ -62,7 +62,7 @@ func TestCollection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			versions := make([]Version, len(tt.versions))
 			for i, raw := range tt.versions {
-				v, err := NewVersion(raw)
+				v, err := Parse(raw)
 				require.NoError(t, err)
 				versions[i] = v
 			}

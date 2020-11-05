@@ -47,7 +47,7 @@ func TestNewVersion(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.version, func(t *testing.T) {
-			_, err := semver.NewVersion(tc.version)
+			_, err := semver.Parse(tc.version)
 			if tc.err {
 				require.NotNil(t, err)
 			} else {
@@ -78,10 +78,10 @@ func TestVersion_Compare(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := semver.NewVersion(tt.v1)
+			v1, err := semver.Parse(tt.v1)
 			require.NoError(t, err, tt.v1)
 
-			v2, err := semver.NewVersion(tt.v2)
+			v2, err := semver.Parse(tt.v2)
 			require.NoError(t, err, tt.v2)
 
 			assert.Equal(t, tt.expected, v1.Compare(v2))

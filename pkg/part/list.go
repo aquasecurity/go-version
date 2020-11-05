@@ -1,6 +1,7 @@
 package part
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -9,6 +10,10 @@ type Parts []Part
 
 func NewParts(s string) Parts {
 	var parts []Part
+	if s == "" {
+		return parts
+	}
+
 	for _, p := range strings.Split(s, ".") {
 		parts = append(parts, NewPart(p))
 	}
@@ -28,36 +33,79 @@ func (parts Parts) Normalize() Parts {
 	return ret
 }
 
-func (parts Parts) Compare(other Parts, padding Part) int {
-	if other == nil {
-		return 1
+func (parts Parts) Padding(size int, padding Part) Parts {
+	diff := size - len(parts)
+	if diff <= 0 {
+		return parts
 	}
 
-	if reflect.DeepEqual(parts, other) {
+	padded := parts
+	for i := 0; i < diff; i++ {
+		padded = append(padded, padding)
+	}
+	return padded
+}
+
+func (parts Parts) Compare(other Part) int {
+	if other == nil {
+		return 1
+	} else if other.IsAny() {
 		return 0
 	}
 
-	iter := parts.Zip(other)
+	o, ok := other.(Parts)
+	if !ok {
+		return -1
+	}
+
+	if reflect.DeepEqual(parts, o) {
+		return 0
+	}
+
+	iter := parts.Zip(o)
 	for tuple := iter(); tuple != nil; tuple = iter() {
 		var l, r = tuple.Left, tuple.Right
 		if l == nil {
-			l = padding
+			return -1
 		}
 		if r == nil {
-			r = padding
+			return 1
 		}
 
-		if l == nil {
-			if result := -1 * r.Compare(l); result != 0 {
-				return result
-			}
-		} else {
-			if result := l.Compare(r); result != 0 {
-				return result
-			}
+		if l.IsAny() || r.IsAny() {
+			return 0
+		}
+
+		if result := l.Compare(r); result != 0 {
+			return result
 		}
 	}
 	return 0
+}
+
+func (parts Parts) IsNull() bool {
+	return parts.IsAny() || len(parts) == 0
+}
+
+func (parts Parts) IsAny() bool {
+	for _, p := range parts {
+		if p.IsAny() {
+			return true
+		}
+	}
+	return false
+}
+
+func (parts Parts) IsEmpty() bool {
+	return false
+}
+
+func (parts Parts) String() string {
+	s := make([]string, len(parts))
+	for i, p := range parts {
+		s[i] = fmt.Sprint(p)
+	}
+	return strings.Join(s, ".")
 }
 
 type ZipTuple struct {
@@ -81,4 +129,12 @@ func (parts Parts) Zip(other Parts) func() *ZipTuple {
 		i++
 		return &ZipTuple{Left: part1, Right: part2}
 	}
+}
+
+func Uint64SliceToParts(uint64Parts []Uint64) Parts {
+	parts := make(Parts, len(uint64Parts))
+	for i, u := range uint64Parts {
+		parts[i] = u
+	}
+	return parts
 }
