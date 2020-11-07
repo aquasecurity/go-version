@@ -1,6 +1,8 @@
 package part
 
-import "strconv"
+import (
+	"strconv"
+)
 
 const Zero = Uint64(0)
 
@@ -29,6 +31,8 @@ func (s Uint64) Compare(other Part) int {
 		return 1
 	case String:
 		return -1
+	case PreString:
+		return 1
 	case Any:
 		return 0
 	case Empty:

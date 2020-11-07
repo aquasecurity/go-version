@@ -21,9 +21,11 @@ func NewParts(s string) Parts {
 }
 
 func (parts Parts) Normalize() Parts {
-	ret := parts
-	for i := len(parts) - 1; i >= 0; i-- {
-		lastItem := parts[i]
+	ret := make(Parts, len(parts))
+	copy(ret, parts)
+
+	for i := len(ret) - 1; i >= 0; i-- {
+		lastItem := ret[i]
 		if lastItem.IsNull() {
 			ret = ret[:i]
 			continue
