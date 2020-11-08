@@ -116,7 +116,7 @@ func (v Version) LessThanOrEqual(o Version) bool {
 
 // String returns the full version string included pre-release
 // and metadata information.
-func (v *Version) String() string {
+func (v Version) String() string {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "%d", v.segments[0])
 	for _, s := range v.segments[1:len(v.segments)] {
@@ -135,7 +135,7 @@ func (v *Version) String() string {
 
 // Original returns the original parsed version as-is, including any
 // potential whitespace, `v` prefix, etc.
-func (v *Version) Original() string {
+func (v Version) Original() string {
 	return v.original
 }
 
