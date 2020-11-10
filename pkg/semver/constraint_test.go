@@ -45,13 +45,21 @@ func TestConstraint_Check(t *testing.T) {
 		version    string
 		want       bool
 	}{
-		// Equal
+		// Equal: =
 		{"=2.0.0", "1.2.3", false},
 		{"=2.0.0", "2.0.0", true},
 		{"=2.0", "1.2.3", false},
 		{"=2.0", "2.0.0", true},
 		{"=2.0", "2.0.1", true},
 		{"=0", "1.0.0", false},
+
+		// Equal: ==
+		{"== 2.0.0", "1.2.3", false},
+		{"==2.0.0", "2.0.0", true},
+		{"== 2.0", "1.2.3", false},
+		{"==2.0", "2.0.0", true},
+		{"== 2.0", "2.0.1", true},
+		{"==0", "1.0.0", false},
 
 		// Equal without "="
 		{"4.1", "4.1.0", true},
@@ -219,6 +227,10 @@ func TestConstraint_CheckWithPreRelease(t *testing.T) {
 		{"=2.0", "2.0.0", true},
 		{"=2.0", "2.0.1", true},
 		{"4.1", "4.1.0", true},
+		{"== 2.0.0", "1.2.3", false},
+		{"==2.0.0", "2.0.0", true},
+		{"== 2.0", "2.0.0", true},
+		{"==2.0", "2.0.1", true},
 
 		// Not equal
 		{"!=4.1.0", "4.1.0", false},
@@ -463,6 +475,8 @@ func TestConstraint_CheckWithPreReleaseAndZeroPadding(t *testing.T) {
 		// pre-release: Equal
 		{"=4.1", "4.1.0-alpha.1", false},
 		{"=4.1-alpha", "4.1.0-alpha", true},
+		{"== 4.1", "4.1.0-alpha.1", false},
+		{"==4.1-alpha", "4.1.0-alpha", true},
 
 		// pre-release: Not equal
 		{"!=4.1", "5.1.0-alpha.1", true},
