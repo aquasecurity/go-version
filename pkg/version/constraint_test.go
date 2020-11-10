@@ -44,8 +44,13 @@ func TestVersion_Check(t *testing.T) {
 		{"=4.1-alpha", "4.1.0-alpha", true},
 		{"=2.0", "1.2.3", false},
 		{"=2.0", "2.0.0", true},
-		{"=2.0", "2.0.1", false}, // different
+		{"=2.0", "2.0.1", false},
 		{"=0", "1.0.0", false},
+
+		{"== 2.0.0", "1.2.3", false},
+		{"==2.0.0", "2.0.0", true},
+		{"== 4.1", "4.1.0-alpha.1", false},
+		{"==4.1-alpha", "4.1.0-alpha", true},
 
 		{"2", "1.0.0", false},
 		{"2", "3.4.5", false},
