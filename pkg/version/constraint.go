@@ -36,7 +36,7 @@ func init() {
 	}
 
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
-		`^\s*(%s)\s*(%s)\s*$`,
+		`(%s)\s*(%s)`,
 		strings.Join(ops, "|"),
 		regex))
 }
@@ -56,8 +56,13 @@ type constraint struct {
 func NewConstraints(v string) (Constraints, error) {
 	var css [][]constraint
 	for _, vv := range strings.Split(v, "||") {
+		ss := constraintRegexp.FindAllString(vv, -1)
+		if ss == nil {
+			ss = append(ss, strings.TrimSpace(vv))
+		}
+
 		var cs []constraint
-		for _, single := range strings.Split(vv, ",") {
+		for _, single := range ss {
 			c, err := newConstraint(single)
 			if err != nil {
 				return Constraints{}, err

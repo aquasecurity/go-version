@@ -207,18 +207,26 @@ func TestVersion_Check(t *testing.T) {
 		{"^0.2.3-beta.2", "0.3.4-beta.2", false},
 		{"^0.2.3-beta.2", "0.2.3-beta.2", true},
 
+		// More than 3 numbers
+		{"< 1.0.0.1 || = 2.0.1.2.3", "2.0", false},
+		{"< 1.0.0.1 || = 2.0.5.4.8", "2.0.5.4.8", true},
+		{"> 1.0.0.0.1 < 1.0.0.1 || = 2.0.5.4.8", "1.0.0.0.9", true},
 
 		// Leading zeroes
 		// https://docs.microsoft.com/en-us/nuget/concepts/package-versioning#normalized-version-numbers
 		{">1.2.3", "1.02.4", true},
 		{"<1.3.09", "1.05.4", false},
+
 		// Multiple constraints
 		{"< 1.0 || = 2.0", "2.0", true},
 		{"< 1.0 || = 2.0", "0.1", true},
 		{"< 1.0 || = 2.0", "1.1", false},
 		{"> 1.0, < 1.2", "1.1.5", true},
 		{"> 1.0, < 1.2 || >3.0", "1.5", false},
+		{"> 1.0 < 1.2 || >3.0", "1.5", false},
+		{"> 1.0	< 1.2 || >3.0", "1.1", true},
 		{"> 1.0, < 1.2 || >3.0", "4.2", true},
+		{"> 1.0 < 1.2 || >3.0, <4.0", "4.2", false},
 		{"^0.2 || ^1", "1.8.0", true},
 		{"^0.2, ^1", "1.8.0", false},
 	}
