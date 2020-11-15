@@ -288,7 +288,7 @@ Allows changes that do not modify the left-most non-zero digit.
 ### Pessimistic Range
 It means the version must be equal to or greater than in the last digit.
 
-- `~>1.2.3` := := `>=1.2.3 <1.3.0`
+- `~>1.2.3` := `>=1.2.3 <1.3.0`
 - `~>1.2` := `>=1.2.0 <2.0` (*different from `~`*)
 - `~>1` := `>=1.0.0 <2.0.0`
 - `~>1.2.3-beta.2` := `>=1.2.3-beta.2 <1.3.0`
