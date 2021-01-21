@@ -55,8 +55,15 @@ func (parts Parts) Compare(other Part) int {
 		return 0
 	}
 
-	o, ok := other.(Parts)
-	if !ok {
+	var o Parts
+	switch t := other.(type) {
+	case InfinityType:
+		return -1
+	case NegativeInfinityType:
+		return 1
+	case Parts:
+		o = t
+	default:
 		return -1
 	}
 
