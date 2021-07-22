@@ -58,8 +58,8 @@ type constraint struct {
 	original string
 }
 
-func Test1(){
-	fmt.Println("test1")
+func Test2(){
+	fmt.Println("test2")
 }
 
 // NewConstraints parses a given constraint and returns a new instance of Constraints
