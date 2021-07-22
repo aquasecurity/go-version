@@ -58,6 +58,10 @@ type constraint struct {
 	original string
 }
 
+func Test1(){
+	fmt.Println("test1")
+}
+
 // NewConstraints parses a given constraint and returns a new instance of Constraints
 func NewConstraints(v string) (Constraints, error) {
 	var css [][]constraint
