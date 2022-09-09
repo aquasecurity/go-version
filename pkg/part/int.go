@@ -1,6 +1,7 @@
 package part
 
 import (
+	"math/big"
 	"strconv"
 )
 
@@ -29,6 +30,10 @@ func (s Uint64) Compare(other Part) int {
 			return -1
 		}
 		return 1
+	case BigInt:
+		biB := big.Int(o)
+		biBP := &biB
+		return -biBP.Cmp(big.NewInt(int64(s)))
 	case String:
 		return -1
 	case PreString:

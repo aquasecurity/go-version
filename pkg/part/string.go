@@ -20,6 +20,8 @@ func (s String) Compare(other Part) int {
 	switch o := other.(type) {
 	case Uint64:
 		return 1
+	case BigInt:
+		return 1
 	case String:
 		return strings.Compare(string(s), string(o))
 	case PreString:
@@ -64,6 +66,8 @@ func (s PreString) Compare(other Part) int {
 
 	switch o := other.(type) {
 	case Uint64:
+		return -1
+	case BigInt:
 		return -1
 	case String:
 		return strings.Compare(string(s), string(o))

@@ -147,3 +147,11 @@ func Uint64SliceToParts(uint64Parts []Uint64) Parts {
 	}
 	return parts
 }
+
+func BigIntSliceToParts(bigIntParts []BigInt) Parts {
+	parts := make(Parts, len(bigIntParts))
+	for i, u := range bigIntParts {
+		parts[i] = u
+	}
+	return parts
+}
