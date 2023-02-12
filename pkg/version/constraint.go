@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aquasecurity/go-version/pkg/part"
+	"github.com/aquasecurity/go-version/pkg/prerelease"
 	"golang.org/x/xerrors"
 )
 
@@ -30,6 +32,11 @@ var (
 
 type operatorFunc func(v, c Version) bool
 
+const cvRegex = `v?([0-9|x|X|\*]+(\.[0-9|x|X|\*]+)*)` +
+	`(-([0-9]+[0-9A-Za-z\-~]*(\.[0-9A-Za-z\-~]+)*)|(-?([A-Za-z\-~]+[0-9A-Za-z\-~]*(\.[0-9A-Za-z\-~]+)*)))?` +
+	`(\+([0-9A-Za-z\-~]+(\.[0-9A-Za-z\-~]+)*))?` +
+	`?`
+
 func init() {
 	ops := make([]string, 0, len(constraintOperators))
 	for k := range constraintOperators {
@@ -39,12 +46,12 @@ func init() {
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`(%s)\s*(%s)`,
 		strings.Join(ops, "|"),
-		regex))
+		cvRegex))
 
 	validConstraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`^\s*(\s*(%s)\s*(%s)\s*\,?)*\s*$`,
 		strings.Join(ops, "|"),
-		regex))
+		cvRegex))
 }
 
 // Constraints is one or more constraint that a version can be checked against.
@@ -90,20 +97,61 @@ func NewConstraints(v string) (Constraints, error) {
 }
 
 func newConstraint(c string) (constraint, error) {
+	o := prereleaseCheck
+	if c == "" {
+		return constraint{
+			version:  Version{},
+			operator: o,
+			original: c,
+		}, nil
+	}
+
 	m := constraintRegexp.FindStringSubmatch(c)
 	if m == nil {
 		return constraint{}, xerrors.Errorf("improper constraint: %s", c)
 	}
 
-	v, err := Parse(m[2])
+	v, err := newConstraintVersion(m[2:])
 	if err != nil {
 		return constraint{}, xerrors.Errorf("version parse error (%s): %w", m[2], err)
 	}
 
+	if len(v.segments) > 0 {
+		o = constraintOperators[m[1]]
+	}
+
 	return constraint{
 		version:  v,
-		operator: constraintOperators[m[1]],
+		operator: o,
 		original: c,
+	}, nil
+}
+
+func newConstraintVersion(matches []string) (Version, error) {
+	var segments []part.Uint64
+	for _, str := range strings.Split(matches[1], ".") {
+		if _, err := part.NewAny(str); err == nil {
+			break
+		}
+
+		val, err := part.NewUint64(str)
+		if err != nil {
+			return Version{}, xerrors.Errorf("error parsing version: %w", err)
+		}
+
+		segments = append(segments, val)
+	}
+
+	pre := matches[7]
+	if pre == "" {
+		pre = matches[4]
+	}
+
+	return Version{
+		segments:      segments,
+		buildMetadata: matches[10],
+		preRelease:    part.NewParts(pre),
+		original:      matches[0],
 	}, nil
 }
 
@@ -149,36 +197,52 @@ func andCheck(v Version, constraints []constraint) bool {
 	return true
 }
 
+func prereleaseCheck(v, c Version) bool {
+	if !v.preRelease.IsNull() && c.preRelease.IsNull() {
+		return false
+	}
+	return true
+}
+
 //-------------------------------------------------------------------
 // Constraint functions
 //-------------------------------------------------------------------
 
 func constraintEqual(v, c Version) bool {
-	return v.Equal(c)
+	if prerelease.Compare(v.preRelease, c.preRelease) != 0 {
+		return false
+	}
+	return v.GreaterThanOrEqual(c) && v.LessThan(c.NextBump())
 }
 
 func constraintNotEqual(v, c Version) bool {
-	return !v.Equal(c)
+	return !constraintEqual(v, c)
 }
 
 func constraintGreaterThan(v, c Version) bool {
-	return v.GreaterThan(c)
+	if !prereleaseCheck(v, c) {
+		return false
+	}
+	if !v.preRelease.IsNull() {
+		return v.GreaterThan(c)
+	}
+	return v.GreaterThanOrEqual(c.NextBump())
 }
 
 func constraintLessThan(v, c Version) bool {
-	return v.LessThan(c)
+	return prereleaseCheck(v, c) && v.LessThan(c)
 }
 
 func constraintGreaterThanEqual(v, c Version) bool {
-	return v.GreaterThanOrEqual(c)
+	return prereleaseCheck(v, c) && v.GreaterThanOrEqual(c)
 }
 
 func constraintLessThanEqual(v, c Version) bool {
-	return v.LessThanOrEqual(c)
+	return prereleaseCheck(v, c) && v.LessThan(c.NextBump())
 }
 
 func constraintPessimistic(v, c Version) bool {
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.PessimisticBump())
+	return prereleaseCheck(v, c) && v.GreaterThanOrEqual(c) && v.LessThan(c.PessimisticBump())
 }
 
 func constraintTilde(v, c Version) bool {
@@ -188,7 +252,7 @@ func constraintTilde(v, c Version) bool {
 	// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0, <1.3.0
 	// ~1.2.3, ~>1.2.3 --> >=1.2.3, <1.3.0
 	// ~1.2.0, ~>1.2.0 --> >=1.2.0, <1.3.0
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.TildeBump())
+	return prereleaseCheck(v, c) && v.GreaterThanOrEqual(c) && v.LessThan(c.TildeBump())
 }
 
 func constraintCaret(v, c Version) bool {
@@ -201,5 +265,5 @@ func constraintCaret(v, c Version) bool {
 	// ^0.0.3  -->  >=0.0.3 <0.0.4
 	// ^0.0    -->  >=0.0.0 <0.1.0
 	// ^0      -->  >=0.0.0 <1.0.0
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.CaretBump())
+	return prereleaseCheck(v, c) && v.GreaterThanOrEqual(c) && v.LessThan(c.CaretBump())
 }

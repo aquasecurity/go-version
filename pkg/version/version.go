@@ -139,43 +139,67 @@ func (v Version) Original() string {
 	return v.original
 }
 
+// Prerelease returns the pre-release version.
+func (v Version) Prerelease() string {
+	return v.preRelease.String()
+}
+
+// NextBump returns the next incremental version.
+func (v Version) NextBump() Version {
+	segments := make([]part.Uint64, len(v.segments))
+	copy(segments, v.segments)
+	bump := Version{segments: segments}
+
+	bump.segments[len(bump.segments)-1] += 1
+	return bump
+}
+
 // PessimisticBump returns the maximum version of "~>"
 // It works like Gem::Version.bump()
 // https://docs.ruby-lang.org/en/2.6.0/Gem/Version.html#method-i-bump
 func (v Version) PessimisticBump() Version {
-	size := len(v.segments)
+	segments := make([]part.Uint64, len(v.segments))
+	copy(segments, v.segments)
+	bump := Version{segments: segments}
+
+	size := len(bump.segments)
 	if size == 1 {
-		v.segments[0] += 1
-		return v
+		bump.segments[0] += 1
+		return bump
 	}
 
-	v.segments[size-1] = 0
-	v.segments[size-2] += 1
+	bump.segments[size-1] = 0
+	bump.segments[size-2] += 1
 
-	v.preRelease = part.Parts{}
-	v.buildMetadata = ""
-
-	return v
+	return bump
 }
 
 // TildeBump returns the maximum version of "~"
 // https://docs.npmjs.com/cli/v6/using-npm/semver#tilde-ranges-123-12-1
 func (v Version) TildeBump() Version {
-	if len(v.segments) == 2 {
-		v.segments[1] += 1
-		return v
+	segments := make([]part.Uint64, len(v.segments))
+	copy(segments, v.segments)
+	bump := Version{segments: segments}
+
+	if len(bump.segments) == 2 {
+		bump.segments[1] += 1
+		return bump
 	}
 
-	return v.PessimisticBump()
+	return bump.PessimisticBump()
 }
 
 // CaretBump returns the maximum version of "^"
 // https://docs.npmjs.com/cli/v6/using-npm/semver#caret-ranges-123-025-004
 func (v Version) CaretBump() Version {
+	segments := make([]part.Uint64, len(v.segments))
+	copy(segments, v.segments)
+	bump := Version{segments: segments}
+
 	found := -1
-	for i, s := range v.segments {
+	for i, s := range bump.segments {
 		if s != 0 {
-			v.segments[i] += 1
+			bump.segments[i] += 1
 			found = i
 			break
 		}
@@ -184,16 +208,13 @@ func (v Version) CaretBump() Version {
 	if found >= 0 {
 		// zero padding
 		// ^1.2.3 => 2.0.0
-		for i := found + 1; i < len(v.segments); i++ {
-			v.segments[i] = 0
+		for i := found + 1; i < len(bump.segments); i++ {
+			bump.segments[i] = 0
 		}
 	} else {
 		// ^0.0 => 0.1
-		v.segments[len(v.segments)-1] += 1
+		bump.segments[len(bump.segments)-1] += 1
 	}
 
-	v.preRelease = part.Parts{}
-	v.buildMetadata = ""
-
-	return v
+	return bump
 }
