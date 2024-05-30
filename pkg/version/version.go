@@ -143,6 +143,8 @@ func (v Version) Original() string {
 // It works like Gem::Version.bump()
 // https://docs.ruby-lang.org/en/2.6.0/Gem/Version.html#method-i-bump
 func (v Version) PessimisticBump() Version {
+	v = v.copy()
+
 	size := len(v.segments)
 	if size == 1 {
 		v.segments[0] += 1
@@ -161,6 +163,8 @@ func (v Version) PessimisticBump() Version {
 // TildeBump returns the maximum version of "~"
 // https://docs.npmjs.com/cli/v6/using-npm/semver#tilde-ranges-123-12-1
 func (v Version) TildeBump() Version {
+	v = v.copy()
+
 	if len(v.segments) == 2 {
 		v.segments[1] += 1
 		return v
@@ -172,6 +176,8 @@ func (v Version) TildeBump() Version {
 // CaretBump returns the maximum version of "^"
 // https://docs.npmjs.com/cli/v6/using-npm/semver#caret-ranges-123-025-004
 func (v Version) CaretBump() Version {
+	v = v.copy()
+
 	found := -1
 	for i, s := range v.segments {
 		if s != 0 {
@@ -196,4 +202,16 @@ func (v Version) CaretBump() Version {
 	v.buildMetadata = ""
 
 	return v
+}
+
+func (v Version) copy() Version {
+	segments := make([]part.Uint64, len(v.segments))
+	copy(segments, v.segments)
+
+	return Version{
+		segments:      segments,
+		preRelease:    v.preRelease,
+		buildMetadata: v.buildMetadata,
+		original:      v.original,
+	}
 }
