@@ -103,6 +103,7 @@ func newConstraint(c string) (Constraint, error) {
 
 	return Constraint{
 		version:      v,
+		operator:     m[1],
 		operatorFunc: constraintOperators[m[1]],
 		original:     c,
 	}, nil
