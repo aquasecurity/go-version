@@ -27,7 +27,7 @@ const (
 
 // Version represents a single version.
 type Version struct {
-	segments      []part.Uint64
+	segments      []part.Part
 	preRelease    part.Parts
 	buildMetadata string
 	original      string
@@ -44,7 +44,7 @@ func Parse(v string) (Version, error) {
 		return Version{}, xerrors.Errorf("malformed version: %s", v)
 	}
 
-	var segments []part.Uint64
+	var segments []part.Part
 	for _, str := range strings.Split(matches[1], ".") {
 		val, err := part.NewUint64(str)
 		if err != nil {
@@ -76,8 +76,8 @@ func (v Version) Compare(other Version) int {
 		return 0
 	}
 
-	p1 := part.Uint64SliceToParts(v.segments).Normalize()
-	p2 := part.Uint64SliceToParts(other.segments).Normalize()
+	p1 := part.Parts(v.segments).Normalize()
+	p2 := part.Parts(other.segments).Normalize()
 
 	p1 = p1.Padding(len(p2), part.Zero)
 	p2 = p2.Padding(len(p1), part.Zero)
@@ -139,6 +139,11 @@ func (v Version) Original() string {
 	return v.original
 }
 
+// Prerelease returns the pre-release version.
+func (v Version) Prerelease() string {
+	return v.preRelease.String()
+}
+
 // PessimisticBump returns the maximum version of "~>"
 // It works like Gem::Version.bump()
 // https://docs.ruby-lang.org/en/2.6.0/Gem/Version.html#method-i-bump
@@ -147,12 +152,12 @@ func (v Version) PessimisticBump() Version {
 
 	size := len(v.segments)
 	if size == 1 {
-		v.segments[0] += 1
+		v.segments[0] = v.segments[0].(part.Uint64) + 1
 		return v
 	}
 
-	v.segments[size-1] = 0
-	v.segments[size-2] += 1
+	v.segments[size-1] = part.Uint64(0)
+	v.segments[size-2] = v.segments[size-2].(part.Uint64) + 1
 
 	v.preRelease = part.Parts{}
 	v.buildMetadata = ""
@@ -166,7 +171,7 @@ func (v Version) TildeBump() Version {
 	v = v.copy()
 
 	if len(v.segments) == 2 {
-		v.segments[1] += 1
+		v.segments[1] = v.segments[1].(part.Uint64) + 1
 		return v
 	}
 
@@ -180,8 +185,8 @@ func (v Version) CaretBump() Version {
 
 	found := -1
 	for i, s := range v.segments {
-		if s != 0 {
-			v.segments[i] += 1
+		if s.(part.Uint64) != 0 {
+			v.segments[i] = v.segments[i].(part.Uint64) + 1
 			found = i
 			break
 		}
@@ -191,11 +196,11 @@ func (v Version) CaretBump() Version {
 		// zero padding
 		// ^1.2.3 => 2.0.0
 		for i := found + 1; i < len(v.segments); i++ {
-			v.segments[i] = 0
+			v.segments[i] = part.Uint64(0)
 		}
 	} else {
 		// ^0.0 => 0.1
-		v.segments[len(v.segments)-1] += 1
+		v.segments[len(v.segments)-1] = v.segments[len(v.segments)-1].(part.Uint64) + 1
 	}
 
 	v.preRelease = part.Parts{}
@@ -205,8 +210,13 @@ func (v Version) CaretBump() Version {
 }
 
 func (v Version) copy() Version {
-	segments := make([]part.Uint64, len(v.segments))
-	copy(segments, v.segments)
+	segments := make([]part.Part, 0, len(v.segments))
+	for _, segment := range v.segments {
+		if segment.IsAny() {
+			break
+		}
+		segments = append(segments, segment)
+	}
 
 	return Version{
 		segments:      segments,
