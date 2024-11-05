@@ -237,6 +237,12 @@ func TestVersion_Check(t *testing.T) {
 		{"> 1.0 < 1.2 || >3.0, <4.0", "4.2", false},
 		{"^0.2 || ^1", "1.8.0", true},
 		{"^0.2, ^1", "1.8.0", false},
+
+		// Build identifiers
+		{">= 1.0.0, < 1.2.0+security-01", "1.0.0", true},
+		{">= 1.0.0, < 1.2.0+security-01", "1.2.0", false},
+		{">= 1.0.0, <= 1.2.0+security-01", "1.2.0", true},
+		{">= 1.0.0, < 1.2.0+security-01", "1.3.0", false},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s %s", tt.version, tt.constraint), func(t *testing.T) {
