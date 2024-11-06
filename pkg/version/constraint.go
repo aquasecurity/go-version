@@ -5,8 +5,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aquasecurity/go-version/pkg/part"
 	"golang.org/x/xerrors"
 )
+
+const cvRegex = `v?([0-9|x|X|\*]+(\.[0-9|x|X|\*]+)*)` +
+	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
+	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?`
 
 var (
 	constraintOperators = map[string]operatorFunc{
@@ -25,6 +30,7 @@ var (
 		"^":  constraintCaret,
 	}
 	constraintRegexp      *regexp.Regexp
+	constraintRangeRegexp *regexp.Regexp
 	validConstraintRegexp *regexp.Regexp
 )
 
@@ -39,12 +45,16 @@ func init() {
 	constraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`(%s)\s*(%s)`,
 		strings.Join(ops, "|"),
-		regex))
+		cvRegex))
+
+	constraintRangeRegexp = regexp.MustCompile(fmt.Sprintf(
+		`(%s)\s+-\s+(%s)`,
+		cvRegex, cvRegex))
 
 	validConstraintRegexp = regexp.MustCompile(fmt.Sprintf(
 		`^\s*(\s*(%s)\s*(%s)\s*\,?)*\s*$`,
 		strings.Join(ops, "|"),
-		regex))
+		cvRegex))
 }
 
 // Constraints is one or more constraint that a version can be checked against.
@@ -61,6 +71,8 @@ type Constraint struct {
 
 // NewConstraints parses a given constraint and returns a new instance of Constraints
 func NewConstraints(v string) (Constraints, error) {
+	v = rewriteRange(v)
+
 	var css [][]Constraint
 	for _, vv := range strings.Split(v, "||") {
 		// Validate the segment
@@ -90,15 +102,43 @@ func NewConstraints(v string) (Constraints, error) {
 
 }
 
+func rewriteRange(i string) string {
+	m := constraintRangeRegexp.FindAllStringSubmatch(i, -1)
+	if m == nil {
+		return i
+	}
+	o := i
+	for _, v := range m {
+		t := fmt.Sprintf(">= %s, <= %s.*", v[1], v[11])
+		o = strings.Replace(o, v[0], t, 1)
+	}
+	return o
+}
+
 func newConstraint(c string) (Constraint, error) {
+	if c == "" {
+		return Constraint{
+			version: Version{
+				segments: part.NewParts("*"),
+			},
+			operatorFunc: constraintOperators[""],
+		}, nil
+	}
+
 	m := constraintRegexp.FindStringSubmatch(c)
 	if m == nil {
 		return Constraint{}, xerrors.Errorf("improper constraint: %s", c)
 	}
 
-	v, err := Parse(m[2])
-	if err != nil {
-		return Constraint{}, xerrors.Errorf("version parse error (%s): %w", m[2], err)
+	var segments []part.Part
+	for _, str := range strings.Split(m[3], ".") {
+		segments = append(segments, part.NewPart(str))
+	}
+
+	v := Version{
+		segments:   segments,
+		preRelease: part.NewParts(m[6]),
+		original:   c,
 	}
 
 	return Constraint{

@@ -67,12 +67,17 @@ func TestVersion_Check(t *testing.T) {
 		{"2.1", "2.2.1", false},
 		{"4.1", "4.1.0", true},
 		{"1.0", "1.0.0", true},
+		{"1.x", "1.2.3", true},
+		{"4.1.x", "4.1.3", true},
 
 		// Not equal
 		{"!=4.1.0", "4.1.0", false},
 		{"!=4.1.0", "4.1.1", true},
 		{"!=4.1", "5.1.0-alpha.1", true},
 		{"!=4.1-alpha", "4.1.0", true},
+		{"!=4.x", "5.1.0", true},
+		{"!=4.1.x", "4.2.0", true},
+		{"!=4.2.x", "4.2.3", false},
 
 		// Less than
 		{"<0.0.5", "0.1.0", false},
@@ -86,6 +91,10 @@ func TestVersion_Check(t *testing.T) {
 		{"<1.1", "0.1.0", true},
 		{"<1.1", "1.1.0", false},
 		{"<1.1", "1.1.1", false},
+		{"<1.x", "1.1.1", false},
+		{"<2.x", "1.1.1", true},
+		{"<1.1.x", "1.2.1", false},
+		{"<1.2.x", "1.1.1", true},
 
 		// Less than or equal
 		{"<=0.2.3", "1.2.3", false},
@@ -98,6 +107,9 @@ func TestVersion_Check(t *testing.T) {
 		{"<=1.1", "0.1.0", true},
 		{"<=1.1", "1.1.0", true},
 		{"<=1.1", "1.1.1", false}, // different
+		{"<=1.x", "1.1.1", true},
+		{"<=2.x", "3.0.0", false},
+		{"<=1.1.x", "1.2.1", false},
 
 		// Greater than
 		{">5.0.0", "4.1.0", false},
@@ -120,6 +132,8 @@ func TestVersion_Check(t *testing.T) {
 		{">11.1", "11.1.0", false},
 		{">11.1", "11.1.1", true}, // different
 		{">11.1", "11.2.1", true},
+		{">11.x", "11.2.1", false},
+		{">11.1.x", "11.2.1", true},
 
 		// Greater than or equal
 		{">=11.1.3", "11.1.2", false},
@@ -146,6 +160,8 @@ func TestVersion_Check(t *testing.T) {
 		{">=1.1", "1.1.0", true},
 		{">=1.1", "0.0.9", false},
 		{">=0", "0.0.0", true},
+		{">=11.x", "11.1.2", true},
+		{">=11.1.x", "11.1.2", true},
 
 		// Pessimistic
 		{"~> 1.0", "2.0", false},
@@ -170,6 +186,10 @@ func TestVersion_Check(t *testing.T) {
 		{"~> 2.1.0-a", "2.1.0", true},
 		{"~> 2.1.0-a", "2.1.0-beta", true},
 		{"~> 2.1.0-a", "2.2.0-alpha", true},
+		{"~> 1.x", "2.0", false},
+		{"~> 1.x", "1.1", true},
+		{"~> 1.0.x", "1.2.3", true},
+		{"~> 1.0.x", "1.0.7", true},
 
 		// Tilde
 		{"~1.2.3", "1.2.4", true},
@@ -184,6 +204,8 @@ func TestVersion_Check(t *testing.T) {
 		{"~1.2.3-beta.2", "1.2.3-beta.4", true},
 		{"~1.2.3-beta.2", "1.2.4-beta.2", true},
 		{"~1.2.3-beta.2", "1.3.4-beta.2", false},
+		{"~1.x", "2.1.1", false},
+		{"~1.x", "1.3.5", true},
 
 		// Caret
 		{"^1.2.3", "1.8.9", true},
@@ -214,6 +236,28 @@ func TestVersion_Check(t *testing.T) {
 		{"^0.2.3-beta.2", "0.2.4-beta.2", true},
 		{"^0.2.3-beta.2", "0.3.4-beta.2", false},
 		{"^0.2.3-beta.2", "0.2.3-beta.2", true},
+		{"^1.x", "1.1.1", true},
+		{"^2.x", "1.1.1", false},
+
+		// Wildcards
+		{"", "1", true},
+		{"", "4.5.6", true},
+		{"", "1.2.3-alpha", false},
+		{"*", "1", true},
+		{"*", "4.5.6", true},
+		{"*", "1.2.3-alpha", false},
+		{"*-alpha", "1.2.3-alpha", true},
+		{"2.*", "1", false},
+		{"2.*", "3.4.5", false},
+		{"2.*", "2.1.1", true},
+		{"2.1.*", "2.1.1", true},
+		{"2.1.*", "2.2.1", false},
+
+		// Ranges
+		{"1.1 - 2", "1.1.1", true},
+		{"1.1 - 3", "3.4.5", true},
+		{"1.1 - 3", "4.3.2", false},
+		{"1.5.0 - 4", "3.7.0", true},
 
 		// More than 3 numbers
 		{"< 1.0.0.1 || = 2.0.1.2.3", "2.0", false},

@@ -49,12 +49,6 @@ func (parts Parts) Padding(size int, padding Part) Parts {
 }
 
 func (parts Parts) Compare(other Part) int {
-	if other == nil {
-		return 1
-	} else if other.IsAny() {
-		return 0
-	}
-
 	var o Parts
 	switch t := other.(type) {
 	case InfinityType:
@@ -64,6 +58,11 @@ func (parts Parts) Compare(other Part) int {
 	case Parts:
 		o = t
 	default:
+		if other == nil {
+			return 1
+		} else if other.IsAny() {
+			return 0
+		}
 		return -1
 	}
 

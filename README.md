@@ -226,8 +226,6 @@ Supported operators:
     - e.g. `~1.2.3` := `>=1.2.3, <1.3.0`
 - `~>` : you accept any version equal to or greater than in the last digit
     - e.g. `~>3.0.3` := `>= 3.0.3, < 3.1`
-    
-**NOTE** : `version` package doesn't support wildcards such as `x`, `X`, and `*`.
 
 #### Pre-release
 Unlike the `semver` package, `version` package always includes pre-release versions even with no pre-releases constraint.
