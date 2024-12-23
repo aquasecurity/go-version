@@ -132,7 +132,7 @@ c.Check(v) // true
 Note that this is different from the behavior of npm.
 `>= 2.0.0-alpha` allows pre-releases in the 2.0.0 version only, if they are greater than or equal to alpha.
 So, 2.0.0-beta would be allowed, while 2.1.0-alpha would not.
-You can use [go-npm-version](https://github.com/aquasecurity/go-npm-version) for npm version comparion.
+You can use [go-npm-version](https://github.com/aquasecurity/go-npm-version) for npm version comparison.
 It strictly follows the npm rules.
 
 If you want to include pre-releases even with no pre-releases constraint, you can pass `semver.WithPreRelease(true)` as an argument of `semver.NewConstraints`
@@ -164,7 +164,7 @@ c, _ := semver.NewConstraints("> 2")
 c.Check(v) // false
 ```
 
-`3.3.9` satisifies `= 3.3`, and `5.1.2` doesn't satisfy `> 5.1` likewise.
+`3.3.9` satisfies `= 3.3`, and `5.1.2` doesn't satisfy `> 5.1` likewise.
 
 If you want to treat them as 0, you can pass `semver.WithZeroPadding(true)` as an argument of `semver.NewConstraints`
 
