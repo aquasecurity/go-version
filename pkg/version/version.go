@@ -20,8 +20,8 @@ var (
 const (
 	// The raw regular expression string used for testing the validity of a version.
 	regex = `v?([0-9]+(\.[0-9]+)*)` +
-		`(-([0-9]+[0-9A-Za-z\-~]*(\.[0-9A-Za-z\-~]+)*)|(-?([A-Za-z\-~]+[0-9A-Za-z\-~]*(\.[0-9A-Za-z\-~]+)*)))?` +
-		`(\+([0-9A-Za-z\-~]+(\.[0-9A-Za-z\-~]+)*))?`
+		`(-([0-9]+[0-9A-Za-z\-~_]*(\.[0-9A-Za-z\-~_]+)*)|(-?([A-Za-z\-~_]+[0-9A-Za-z\-~_]*(\.[0-9A-Za-z\-~_]+)*)))?` +
+		`(\+([0-9A-Za-z\-~_]+(\.[0-9A-Za-z\-~_]+)*))?`
 )
 
 // Version represents a single version.
