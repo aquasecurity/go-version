@@ -13,7 +13,8 @@ const (
 	BuildMetadataOrderNodeSemver BuildMetadataOrder = iota + 1
 )
 
-// Option configures version comparisons and constraint checks.
+// Option configures CompareWithOptions and NewConstraints. Other comparison
+// methods and Collection sorting do not accept options.
 type Option interface {
 	apply(*options)
 }
@@ -28,7 +29,9 @@ func (option buildMetadataOrderOption) apply(config *options) {
 	config.buildMetadataOrder = BuildMetadataOrder(option)
 }
 
-// WithBuildMetadataOrder selects how build metadata is ordered.
+// WithBuildMetadataOrder selects how CompareWithOptions orders build metadata.
+// When passed to NewConstraints, the selected order applies to every constraint
+// operator.
 func WithBuildMetadataOrder(order BuildMetadataOrder) Option {
 	return buildMetadataOrderOption(order)
 }

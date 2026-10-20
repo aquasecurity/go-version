@@ -199,6 +199,7 @@ func (v Version) PessimisticBump() Version {
 	size := len(v.segments)
 	if size == 1 {
 		v.segments[0] += 1
+		v.buildMetadata = ""
 		return v
 	}
 
@@ -218,6 +219,7 @@ func (v Version) TildeBump() Version {
 
 	if len(v.segments) == 2 {
 		v.segments[1] += 1
+		v.buildMetadata = ""
 		return v
 	}
 

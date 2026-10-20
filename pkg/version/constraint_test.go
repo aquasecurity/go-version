@@ -277,6 +277,8 @@ func TestVersion_CheckBuildMetadataNodeSemver(t *testing.T) {
 		{"~> 1.2.3+echo.2", "1.2.3+echo.1", false},
 		{"~ 1.2.3+echo.2", "1.2.3+echo.1", false},
 		{"^ 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"~> 1+echo.1", "2.0.0", false},
+		{"~ 1.2+echo.1", "1.3.0", false},
 	}
 	option := WithBuildMetadataOrder(BuildMetadataOrderNodeSemver)
 
