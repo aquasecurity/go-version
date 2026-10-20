@@ -28,7 +28,7 @@ var (
 	validConstraintRegexp *regexp.Regexp
 )
 
-type operatorFunc func(v, c Version) bool
+type operatorFunc func(v, c Version, config options) bool
 
 func init() {
 	ops := make([]string, 0, len(constraintOperators))
@@ -50,6 +50,7 @@ func init() {
 // Constraints is one or more constraint that a version can be checked against.
 type Constraints struct {
 	constraints [][]Constraint
+	options     options
 }
 
 type Constraint struct {
@@ -59,8 +60,8 @@ type Constraint struct {
 	original     string
 }
 
-// NewConstraints parses a given constraint and returns a new instance of Constraints
-func NewConstraints(v string) (Constraints, error) {
+// NewConstraints parses a given constraint and returns a new instance of Constraints.
+func NewConstraints(v string, opts ...Option) (Constraints, error) {
 	var css [][]Constraint
 	for _, vv := range strings.Split(v, "||") {
 		// Validate the segment
@@ -86,6 +87,7 @@ func NewConstraints(v string) (Constraints, error) {
 
 	return Constraints{
 		constraints: css,
+		options:     newOptions(opts...),
 	}, nil
 
 }
@@ -109,8 +111,8 @@ func newConstraint(c string) (Constraint, error) {
 	}, nil
 }
 
-func (c Constraint) check(v Version) bool {
-	return c.operatorFunc(v, c.version)
+func (c Constraint) check(v Version, config options) bool {
+	return c.operatorFunc(v, c.version, config)
 }
 
 func (c Constraint) String() string {
@@ -132,7 +134,7 @@ func (cs Constraints) List() [][]Constraint {
 // Check tests if a version satisfies all the constraints.
 func (cs Constraints) Check(v Version) bool {
 	for _, c := range cs.constraints {
-		if andCheck(v, c) {
+		if andCheck(v, c, cs.options) {
 			return true
 		}
 	}
@@ -154,9 +156,9 @@ func (cs Constraints) String() string {
 	return strings.Join(csStr, "||")
 }
 
-func andCheck(v Version, constraints []Constraint) bool {
+func andCheck(v Version, constraints []Constraint, config options) bool {
 	for _, c := range constraints {
-		if !c.check(v) {
+		if !c.check(v, config) {
 			return false
 		}
 	}
@@ -167,45 +169,45 @@ func andCheck(v Version, constraints []Constraint) bool {
 // Constraint functions
 //-------------------------------------------------------------------
 
-func constraintEqual(v, c Version) bool {
-	return v.Equal(c)
+func constraintEqual(v, c Version, config options) bool {
+	return v.compare(c, config) == 0
 }
 
-func constraintNotEqual(v, c Version) bool {
-	return !v.Equal(c)
+func constraintNotEqual(v, c Version, config options) bool {
+	return v.compare(c, config) != 0
 }
 
-func constraintGreaterThan(v, c Version) bool {
-	return v.GreaterThan(c)
+func constraintGreaterThan(v, c Version, config options) bool {
+	return v.compare(c, config) > 0
 }
 
-func constraintLessThan(v, c Version) bool {
-	return v.LessThan(c)
+func constraintLessThan(v, c Version, config options) bool {
+	return v.compare(c, config) < 0
 }
 
-func constraintGreaterThanEqual(v, c Version) bool {
-	return v.GreaterThanOrEqual(c)
+func constraintGreaterThanEqual(v, c Version, config options) bool {
+	return v.compare(c, config) >= 0
 }
 
-func constraintLessThanEqual(v, c Version) bool {
-	return v.LessThanOrEqual(c)
+func constraintLessThanEqual(v, c Version, config options) bool {
+	return v.compare(c, config) <= 0
 }
 
-func constraintPessimistic(v, c Version) bool {
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.PessimisticBump())
+func constraintPessimistic(v, c Version, config options) bool {
+	return v.compare(c, config) >= 0 && v.compare(c.PessimisticBump(), config) < 0
 }
 
-func constraintTilde(v, c Version) bool {
+func constraintTilde(v, c Version, config options) bool {
 	// ~*, ~>* --> >= 0.0.0 (any)
 	// ~2, ~2.x, ~2.x.x, ~>2, ~>2.x ~>2.x.x --> >=2.0.0, <3.0.0
 	// ~2.0, ~2.0.x, ~>2.0, ~>2.0.x --> >=2.0.0, <2.1.0
 	// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0, <1.3.0
 	// ~1.2.3, ~>1.2.3 --> >=1.2.3, <1.3.0
 	// ~1.2.0, ~>1.2.0 --> >=1.2.0, <1.3.0
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.TildeBump())
+	return v.compare(c, config) >= 0 && v.compare(c.TildeBump(), config) < 0
 }
 
-func constraintCaret(v, c Version) bool {
+func constraintCaret(v, c Version, config options) bool {
 	// ^*      -->  (any)
 	// ^1.2.3  -->  >=1.2.3 <2.0.0
 	// ^1.2    -->  >=1.2.0 <2.0.0
@@ -215,5 +217,5 @@ func constraintCaret(v, c Version) bool {
 	// ^0.0.3  -->  >=0.0.3 <0.0.4
 	// ^0.0    -->  >=0.0.0 <0.1.0
 	// ^0      -->  >=0.0.0 <1.0.0
-	return v.GreaterThanOrEqual(c) && v.LessThan(c.CaretBump())
+	return v.compare(c, config) >= 0 && v.compare(c.CaretBump(), config) < 0
 }

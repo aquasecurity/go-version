@@ -256,3 +256,49 @@ func TestVersion_Check(t *testing.T) {
 		})
 	}
 }
+
+func TestVersion_CheckBuildMetadataNodeSemver(t *testing.T) {
+	tests := []struct {
+		constraint string
+		version    string
+		want       bool
+	}{
+		{"= 1.2.3", "1.2.3+echo.1", false},
+		{"= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"!= 1.2.3+echo.1", "1.2.3+echo.2", true},
+		{"< 1.2.3+echo.1", "1.2.3", true},
+		{"< 1.2.3+echo.2", "1.2.3+echo.1", true},
+		{"<= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"> 1.2.3", "1.2.3+echo.1", true},
+		{">= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"< 1.2.3-alpha+echo.2", "1.2.3-alpha+echo.1", true},
+		{">= 1.2.3+echo.1, < 1.2.3+echo.3", "1.2.3+echo.2", true},
+		{">= 1.2.3+echo.1, < 1.2.3+echo.3", "1.2.3+echo.3", false},
+		{"~> 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"~ 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"^ 1.2.3+echo.2", "1.2.3+echo.1", false},
+	}
+	option := WithBuildMetadataOrder(BuildMetadataOrderNodeSemver)
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s %s", tt.version, tt.constraint), func(t *testing.T) {
+			constraints, err := NewConstraints(tt.constraint, option)
+			require.NoError(t, err)
+
+			v, err := Parse(tt.version)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, constraints.Check(v))
+		})
+	}
+}
+
+func TestVersion_ConstraintBuildMetadataOrderIsOptIn(t *testing.T) {
+	constraints, err := NewConstraints("= 1.2.3+echo.1")
+	require.NoError(t, err)
+
+	v, err := Parse("1.2.3")
+	require.NoError(t, err)
+
+	assert.True(t, constraints.Check(v))
+}

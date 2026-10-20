@@ -199,6 +199,21 @@ if v1.LessThan(v2) {
 
 It also supports version sorting.
 
+#### Build Metadata
+Build metadata is ignored by default. To order it using node-semver's
+`compareBuild` rules, pass the opt-in strategy to comparisons or constraints:
+
+```
+option := version.WithBuildMetadataOrder(version.BuildMetadataOrderNodeSemver)
+
+v1, _ := version.Parse("1.2.3")
+v2, _ := version.Parse("1.2.3+build.1")
+v1.CompareWithOptions(v2, option) // -1
+
+c, _ := version.NewConstraints("< 1.2.3+build.2", option)
+c.Check(v2) // true
+```
+
 ### Version Constraints
 It is almost the same as `semver` package, but there are some differences.
 

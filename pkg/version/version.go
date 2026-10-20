@@ -66,10 +66,20 @@ func Parse(v string) (Version, error) {
 	}, nil
 }
 
-// Compare compares this version to another version. This
-// returns -1, 0, or 1 if this version is smaller, equal,
-// or larger than the other version, respectively.
+// Compare compares this version to another version. This returns -1, 0, or 1
+// if this version is smaller, equal, or larger than the other version,
+// respectively.
 func (v Version) Compare(other Version) int {
+	return v.compare(other, options{})
+}
+
+// CompareWithOptions compares this version to another version using the given
+// comparison options.
+func (v Version) CompareWithOptions(other Version, opts ...Option) int {
+	return v.compare(other, newOptions(opts...))
+}
+
+func (v Version) compare(other Version, config options) int {
 	// A quick, efficient equality check
 	if v.String() == other.String() {
 		return 0
@@ -85,7 +95,15 @@ func (v Version) Compare(other Version) int {
 		return result
 	}
 
-	return prerelease.Compare(v.preRelease, other.preRelease)
+	if result := prerelease.Compare(v.preRelease, other.preRelease); result != 0 {
+		return result
+	}
+
+	if config.buildMetadataOrder == BuildMetadataOrderNodeSemver {
+		return compareBuildMetadataNodeSemver(v.buildMetadata, other.buildMetadata)
+	}
+
+	return 0
 }
 
 // Equal tests if two versions are equal.
@@ -111,6 +129,40 @@ func (v Version) LessThan(o Version) bool {
 // LessThanOrEqual tests if this version is less than or equal to another version.
 func (v Version) LessThanOrEqual(o Version) bool {
 	return v.Compare(o) <= 0
+}
+
+// compareBuildMetadataNodeSemver orders build metadata like node-semver's
+// compareBuild. A version without metadata sorts before one with metadata.
+func compareBuildMetadataNodeSemver(v, other string) int {
+	switch {
+	case v == other:
+		return 0
+	case v == "":
+		return -1
+	case other == "":
+		return 1
+	}
+
+	return newBuildMetadataParts(v).Compare(newBuildMetadataParts(other))
+}
+
+// newBuildMetadataParts splits build metadata into identifiers. Numeric
+// identifiers compare numerically and sort before non-numeric identifiers.
+// part.NewPart is intentionally not used because it treats x and X as
+// wildcards, while they are ordinary build metadata identifiers.
+// Numeric identifiers larger than uint64 are kept as strings, matching the
+// package's existing prerelease identifier behavior.
+func newBuildMetadataParts(buildMetadata string) part.Parts {
+	identifiers := strings.Split(buildMetadata, ".")
+	parts := make(part.Parts, len(identifiers))
+	for i, identifier := range identifiers {
+		if number, err := part.NewUint64(identifier); err == nil {
+			parts[i] = number
+		} else {
+			parts[i] = part.NewString(identifier)
+		}
+	}
+	return parts
 }
 
 // String returns the full version string included pre-release
