@@ -172,36 +172,56 @@ func andCheck(v Version, constraints []Constraint, conf conf) bool {
 	return true
 }
 
+func equal(v, c Version, conf conf) bool {
+	return v.compare(c, conf) == 0
+}
+
+func greaterThan(v, c Version, conf conf) bool {
+	return v.compare(c, conf) > 0
+}
+
+func greaterThanOrEqual(v, c Version, conf conf) bool {
+	return v.compare(c, conf) >= 0
+}
+
+func lessThan(v, c Version, conf conf) bool {
+	return v.compare(c, conf) < 0
+}
+
+func lessThanOrEqual(v, c Version, conf conf) bool {
+	return v.compare(c, conf) <= 0
+}
+
 //-------------------------------------------------------------------
 // Constraint functions
 //-------------------------------------------------------------------
 
 func constraintEqual(v, c Version, conf conf) bool {
-	return v.compare(c, conf) == 0
+	return equal(v, c, conf)
 }
 
 func constraintNotEqual(v, c Version, conf conf) bool {
-	return v.compare(c, conf) != 0
+	return !equal(v, c, conf)
 }
 
 func constraintGreaterThan(v, c Version, conf conf) bool {
-	return v.compare(c, conf) > 0
+	return greaterThan(v, c, conf)
 }
 
 func constraintLessThan(v, c Version, conf conf) bool {
-	return v.compare(c, conf) < 0
+	return lessThan(v, c, conf)
 }
 
 func constraintGreaterThanEqual(v, c Version, conf conf) bool {
-	return v.compare(c, conf) >= 0
+	return greaterThanOrEqual(v, c, conf)
 }
 
 func constraintLessThanEqual(v, c Version, conf conf) bool {
-	return v.compare(c, conf) <= 0
+	return lessThanOrEqual(v, c, conf)
 }
 
 func constraintPessimistic(v, c Version, conf conf) bool {
-	return v.compare(c, conf) >= 0 && v.compare(c.PessimisticBump(), conf) < 0
+	return greaterThanOrEqual(v, c, conf) && lessThan(v, c.PessimisticBump(), conf)
 }
 
 func constraintTilde(v, c Version, conf conf) bool {
@@ -211,7 +231,7 @@ func constraintTilde(v, c Version, conf conf) bool {
 	// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0, <1.3.0
 	// ~1.2.3, ~>1.2.3 --> >=1.2.3, <1.3.0
 	// ~1.2.0, ~>1.2.0 --> >=1.2.0, <1.3.0
-	return v.compare(c, conf) >= 0 && v.compare(c.TildeBump(), conf) < 0
+	return greaterThanOrEqual(v, c, conf) && lessThan(v, c.TildeBump(), conf)
 }
 
 func constraintCaret(v, c Version, conf conf) bool {
@@ -224,5 +244,5 @@ func constraintCaret(v, c Version, conf conf) bool {
 	// ^0.0.3  -->  >=0.0.3 <0.0.4
 	// ^0.0    -->  >=0.0.0 <0.1.0
 	// ^0      -->  >=0.0.0 <1.0.0
-	return v.compare(c, conf) >= 0 && v.compare(c.CaretBump(), conf) < 0
+	return greaterThanOrEqual(v, c, conf) && lessThan(v, c.CaretBump(), conf)
 }
