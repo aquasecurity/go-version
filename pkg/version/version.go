@@ -70,16 +70,20 @@ func Parse(v string) (Version, error) {
 // if this version is smaller, equal, or larger than the other version,
 // respectively.
 func (v Version) Compare(other Version) int {
-	return v.compare(other, options{})
+	return v.compare(other, conf{})
 }
 
 // CompareWithOptions compares this version to another version using the given
 // comparison options.
-func (v Version) CompareWithOptions(other Version, opts ...Option) int {
-	return v.compare(other, newOptions(opts...))
+func (v Version) CompareWithOptions(other Version, opts ...ConstraintOption) int {
+	config := new(conf)
+	for _, o := range opts {
+		o.apply(config)
+	}
+	return v.compare(other, *config)
 }
 
-func (v Version) compare(other Version, config options) int {
+func (v Version) compare(other Version, conf conf) int {
 	// A quick, efficient equality check
 	if v.String() == other.String() {
 		return 0
@@ -99,7 +103,7 @@ func (v Version) compare(other Version, config options) int {
 		return result
 	}
 
-	if config.buildMetadataOrder == BuildMetadataOrderNodeSemver {
+	if conf.buildMetadataOrder == BuildMetadataOrderNodeSemver {
 		return compareBuildMetadataNodeSemver(v.buildMetadata, other.buildMetadata)
 	}
 
