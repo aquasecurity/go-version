@@ -256,3 +256,62 @@ func TestVersion_Check(t *testing.T) {
 		})
 	}
 }
+
+func TestVersion_CheckBuildMetadataNodeSemver(t *testing.T) {
+	tests := []struct {
+		constraint string
+		version    string
+		want       bool
+	}{
+		{"= 1.2.3", "1.2.3+echo.1", false},
+		{"= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"!= 1.2.3+echo.1", "1.2.3+echo.2", true},
+		{"< 1.2.3+echo.1", "1.2.3", true},
+		{"< 1.2.3+echo.2", "1.2.3+echo.1", true},
+		{"<= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"> 1.2.3", "1.2.3+echo.1", true},
+		{">= 1.2.3+echo.1", "1.2.3+echo.1", true},
+		{"< 1.2.3-alpha+echo.2", "1.2.3-alpha+echo.1", true},
+		{">= 1.2.3+echo.1, < 1.2.3+echo.3", "1.2.3+echo.2", true},
+		{">= 1.2.3+echo.1, < 1.2.3+echo.3", "1.2.3+echo.3", false},
+		{"~> 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"~ 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"^ 1.2.3+echo.2", "1.2.3+echo.1", false},
+		{"~> 1+echo.1", "2.0.0", false},
+		{"~ 1.2+echo.1", "1.3.0", false},
+		{"< v0.22.0+echo.1", "v0.22.0", true},
+		{"< v0.22.0+echo.2", "v0.22.0+echo.1", true},
+		{"< v0.22.1", "v0.22.0+echo.2", true},
+		{"< 1.2.3+echo.10", "1.2.3+echo.9", true},
+		{"= 1.2.3+echo.1", "1.2.3+echo.01", true},
+		{"< 1.2.3+alpha", "1.2.3+1", true},
+		{"< 1.2.3+18446744073709551616", "1.2.3+18446744073709551615", true},
+		{"< 1.2.3+echo.1", "1.2.3+echo", true},
+		{"< 1.2.3+build.x", "1.2.3+build.7", true},
+		{"< 1.2.3+echo.1", "1.2.3-alpha+echo.9", true},
+		{"< 1.2.4", "1.2.3+echo.9", true},
+	}
+	option := WithBuildMetadataOrder(BuildMetadataOrderNodeSemver)
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s %s", tt.version, tt.constraint), func(t *testing.T) {
+			constraints, err := NewConstraints(tt.constraint, option)
+			require.NoError(t, err)
+
+			v, err := Parse(tt.version)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, constraints.Check(v))
+		})
+	}
+}
+
+func TestVersion_ConstraintBuildMetadataOrderIsOptIn(t *testing.T) {
+	constraints, err := NewConstraints("= 1.2.3+echo.1")
+	require.NoError(t, err)
+
+	v, err := Parse("1.2.3")
+	require.NoError(t, err)
+
+	assert.True(t, constraints.Check(v))
+}
