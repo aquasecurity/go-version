@@ -66,21 +66,11 @@ func Parse(v string) (Version, error) {
 	}, nil
 }
 
-// Compare compares this version to another version. This returns -1, 0, or 1
-// if this version is smaller, equal, or larger than the other version,
-// respectively.
+// Compare compares this version to another version. This
+// returns -1, 0, or 1 if this version is smaller, equal,
+// or larger than the other version, respectively.
 func (v Version) Compare(other Version) int {
 	return v.compare(other, conf{})
-}
-
-// CompareWithOptions compares this version to another version using the given
-// comparison options.
-func (v Version) CompareWithOptions(other Version, opts ...ConstraintOption) int {
-	config := new(conf)
-	for _, o := range opts {
-		o.apply(config)
-	}
-	return v.compare(other, *config)
 }
 
 func (v Version) compare(other Version, conf conf) int {

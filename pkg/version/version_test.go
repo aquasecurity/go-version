@@ -85,59 +85,6 @@ func TestVersion_Compare(t *testing.T) {
 		})
 	}
 }
-
-func TestVersion_CompareBuildMetadataNodeSemver(t *testing.T) {
-	tests := []struct {
-		v1, v2 string
-		want   int
-	}{
-		{"v0.22.0", "v0.22.0+echo.1", -1},
-		{"v0.22.0+echo.1", "v0.22.0+echo.2", -1},
-		{"v0.22.0+echo.2", "v0.22.1", -1},
-		{"1.2.3", "1.2.3+echo.1", -1},
-		{"1.2.3+echo.1", "1.2.3+echo.2", -1},
-		{"1.2.3+echo.9", "1.2.3+echo.10", -1},
-		{"1.2.3+echo.01", "1.2.3+echo.1", 0},
-		{"1.2.3+1", "1.2.3+alpha", -1},
-		{"1.2.3+18446744073709551615", "1.2.3+18446744073709551616", -1},
-		{"1.2.3+echo", "1.2.3+echo.1", -1},
-		{"1.2.3+build.7", "1.2.3+build.x", -1},
-		{"1.2.3-alpha+echo.1", "1.2.3-alpha+echo.2", -1},
-		{"1.2.3-alpha+echo.9", "1.2.3+echo.1", -1},
-		{"1.2.3+echo.9", "1.2.4", -1},
-		{"1.2.3+echo.1", "1.2.3+echo.1", 0},
-	}
-	option := WithBuildMetadataOrder(BuildMetadataOrderNodeSemver)
-
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%s vs %s", tt.v1, tt.v2), func(t *testing.T) {
-			v1, err := Parse(tt.v1)
-			require.NoError(t, err)
-
-			v2, err := Parse(tt.v2)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want, v1.CompareWithOptions(v2, option))
-			assert.Equal(t, -tt.want, v2.CompareWithOptions(v1, option))
-		})
-	}
-}
-
-func TestVersion_BuildMetadataOrderIsOptIn(t *testing.T) {
-	release, err := Parse("1.2.3")
-	require.NoError(t, err)
-
-	build, err := Parse("1.2.3+echo.1")
-	require.NoError(t, err)
-
-	assert.Equal(t, 0, release.Compare(build))
-	assert.True(t, release.Equal(build))
-
-	option := WithBuildMetadataOrder(BuildMetadataOrderNodeSemver)
-	assert.Less(t, release.CompareWithOptions(build, option), 0)
-	assert.Greater(t, build.CompareWithOptions(release, option), 0)
-}
-
 func TestVersion_ComparePreRelease(t *testing.T) {
 	tests := []struct {
 		v1, v2 string

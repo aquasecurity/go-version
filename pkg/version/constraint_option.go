@@ -21,9 +21,10 @@ const (
 	BuildMetadataOrderNodeSemver BuildMetadataOrder = iota + 1
 )
 
-// WithBuildMetadataOrder selects how CompareWithOptions orders build metadata.
-// When passed to NewConstraints, the selected order applies to every constraint
-// operator.
+// WithBuildMetadataOrder selects how build metadata is ordered when checking
+// constraints. The selected order applies to every constraint operator.
+// Version comparison (Compare, Equal, GreaterThan, LessThan, ...) is not
+// affected and always ignores build metadata.
 type WithBuildMetadataOrder BuildMetadataOrder
 
 func (o WithBuildMetadataOrder) apply(c *conf) {
